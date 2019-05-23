@@ -11,6 +11,10 @@
 	<artifactId>main</artifactId>
 	<packaging>jar</packaging>
 
+	<properties>
+		<exec.args.debug.suspend>n</exec.args.debug.suspend>
+	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.hibernate.sandbox.java</groupId>
@@ -78,6 +82,7 @@
 								<exec executable="java">
 									<arg value="--module-path" />
 									<arg value="target/lib" />
+									<arg value="-agentlib:jdwp=transport=dt_socket,server=y,suspend=${exec.args.debug.suspend},address=*:5005" />
 									<arg value="-m" />
 									<arg value="org.hibernate.sandbox.java.main/org.hibernate.sandbox.java.main.Main" />
 								</exec>
@@ -88,4 +93,13 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>debug</id>
+			<properties>
+				<exec.args.debug.suspend>y</exec.args.debug.suspend>
+			</properties>
+		</profile>
+	</profiles>
 </project>
