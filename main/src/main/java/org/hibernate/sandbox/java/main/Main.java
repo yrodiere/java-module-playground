@@ -3,6 +3,9 @@ package org.hibernate.sandbox.java.main;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.SessionFactoryBuilder;
@@ -70,6 +73,18 @@ public class Main {
 
 		System.out.println();
 		System.out.println();
+		System.out.println( "Booting Hibernate ORM entity manager factory..." );
+		List<?> hibernateOrmServicesFromHibernateOrmEntityManagerFactory = startHibernateOrmEntityManagerFactoryAndGetServices();
+		System.out.flush();
+		System.out.println( "Finished booting Hibernate ORM entity manager factory." );
+		System.out.println();
+		System.out.println();
+		System.out.println( "===== RESULT:" );
+		System.out.println( "Hibernate services loaded from Hibernate ORM module by bootstrapping a whole entity manager factory: " );
+		System.out.println( hibernateOrmServicesFromHibernateOrmEntityManagerFactory );
+
+		System.out.println();
+		System.out.println();
 		System.out.println( "======================================================" );
 		System.out.println( "                   ENDING EXECUTION                   " );
 		System.out.println( "======================================================" );
@@ -94,6 +109,22 @@ public class Main {
 		try ( SessionFactoryImplementor sessionFactory = (SessionFactoryImplementor) sessionFactoryBuilder.build() ) {
 			ServiceRegistryImplementor serviceRegistry = sessionFactory.getServiceRegistry();
 			collectOrmServices( loaded, serviceRegistry );
+		}
+
+		return loaded;
+	}
+
+	private static List<?> startHibernateOrmEntityManagerFactoryAndGetServices() {
+		List<Object> loaded = new ArrayList<>();
+
+		EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory( "primaryPU" );
+		try {
+			SessionFactoryImplementor sessionFactory = entityManagerFactory.unwrap( SessionFactoryImplementor.class );
+			ServiceRegistryImplementor serviceRegistry = sessionFactory.getServiceRegistry();
+			collectOrmServices( loaded, serviceRegistry );
+		}
+		finally {
+			entityManagerFactory.close();
 		}
 
 		return loaded;

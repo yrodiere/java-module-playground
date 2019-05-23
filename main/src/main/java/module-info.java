@@ -3,6 +3,7 @@ module org.hibernate.sandbox.java.main {
 
 	requires org.hibernate.orm.core;
 	requires org.hibernate.search.mapper.orm;
+	requires java.persistence;
 
 	/*
 	 * Apparently this is necessary in order to use ORM,
