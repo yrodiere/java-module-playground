@@ -28,6 +28,13 @@ public class Main {
 
 		System.out.println();
 		System.out.println();
+		List<?> hibernateOrmServicesFromConsumer = ServiceConsumer.loadHibernateOrmServices();
+		System.out.println( "===== RESULT:" );
+		System.out.println( "Hibernate ORM services loaded from consumer module (automatic module without module-info.java): " );
+		System.out.println( hibernateOrmServicesFromConsumer );
+
+		System.out.println();
+		System.out.println();
 		System.out.println( "======================================================" );
 		System.out.println( "                   ENDING EXECUTION                   " );
 		System.out.println( "======================================================" );
