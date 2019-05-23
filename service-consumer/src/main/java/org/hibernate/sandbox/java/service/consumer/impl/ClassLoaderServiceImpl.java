@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.internal.CoreLogging;
 import org.hibernate.internal.CoreMessageLogger;
+import org.hibernate.sandbox.java.service.consumer.impl.AggregatedClassLoader.AggregatedServiceLoader;
 
 /**
  * Standard implementation of the service for interacting with class loaders
@@ -39,7 +40,7 @@ public class ClassLoaderServiceImpl implements ClassLoaderService {
 
 	private static final String CLASS_PATH_SCHEME = "classpath://";
 
-	private final ConcurrentMap<Class, ServiceLoader> serviceLoaders = new ConcurrentHashMap<Class, ServiceLoader>();
+	private final ConcurrentMap<Class, AggregatedServiceLoader> serviceLoaders = new ConcurrentHashMap<>();
 	private volatile AggregatedClassLoader aggregatedClassLoader;
 
 	/**
@@ -244,16 +245,12 @@ public class ClassLoaderServiceImpl implements ClassLoaderService {
 	@Override
 	@SuppressWarnings("unchecked")
 	public <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
-		ServiceLoader<S> serviceLoader = serviceLoaders.get( serviceContract );
+		AggregatedServiceLoader<S> serviceLoader = serviceLoaders.get( serviceContract );
 		if ( serviceLoader == null ) {
-			serviceLoader = ServiceLoader.load( serviceContract, getAggregatedClassLoader() );
+			serviceLoader = getAggregatedClassLoader().createAggregatedServiceLoader( serviceContract );
 			serviceLoaders.put( serviceContract, serviceLoader );
 		}
-		final LinkedHashSet<S> services = new LinkedHashSet<S>();
-		for ( S service : serviceLoader ) {
-			services.add( service );
-		}
-		return services;
+		return serviceLoader.getAll();
 	}
 
 	@Override
@@ -271,7 +268,7 @@ public class ClassLoaderServiceImpl implements ClassLoaderService {
 		return work.doWork( getAggregatedClassLoader() );
 	}
 
-	private ClassLoader getAggregatedClassLoader() {
+	private AggregatedClassLoader getAggregatedClassLoader() {
 		final AggregatedClassLoader aggregated = this.aggregatedClassLoader;
 		if ( aggregated == null ) {
 			throw log.usingStoppedClassLoaderService();
@@ -293,7 +290,7 @@ public class ClassLoaderServiceImpl implements ClassLoaderService {
 
 	@Override
 	public void stop() {
-		for ( ServiceLoader serviceLoader : serviceLoaders.values() ) {
+		for ( AggregatedServiceLoader serviceLoader : serviceLoaders.values() ) {
 			serviceLoader.reload(); // clear service loader providers
 		}
 		serviceLoaders.clear();

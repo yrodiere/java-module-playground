@@ -87,7 +87,7 @@ public class Main {
 		System.out.println();
 		List<?> hibernateOrmServicesFromConsumerWithClassLoaderService = ServiceConsumer.loadHibernateOrmServicesWithClassLoaderService();
 		System.out.println( "===== RESULT:" );
-		System.out.println( "Hibernate ORM services loaded from consumer module (automatic module without module-info.java) with ClassLoaderService: " );
+		System.out.println( "Hibernate ORM services loaded from consumer module (automatic module without module-info.java) with a FIXED ClassLoaderService: " );
 		System.out.println( hibernateOrmServicesFromConsumerWithClassLoaderService );
 
 		System.out.println();

@@ -8,9 +8,14 @@ package org.hibernate.sandbox.java.service.consumer.impl;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.ServiceLoader;
+import java.util.Set;
 
 public class AggregatedClassLoader extends ClassLoader {
 	private final ClassLoader[] individualClassLoaders;
@@ -210,6 +215,10 @@ public class AggregatedClassLoader extends ClassLoader {
 		throw new ClassNotFoundException( "Could not load requested class : " + name );
 	}
 
+	public <S> AggregatedServiceLoader<S> createAggregatedServiceLoader(Class<S> serviceContract) {
+		return new AggregatedServiceLoader<>( serviceContract );
+	}
+
 	private static ClassLoader locateSystemClassLoader() {
 		try {
 			return ClassLoader.getSystemClassLoader();
@@ -227,5 +236,47 @@ public class AggregatedClassLoader extends ClassLoader {
 			return null;
 		}
 	}
+
+	public class AggregatedServiceLoader<S> {
+		private final List<ServiceLoader<S>> delegates;
+
+		private AggregatedServiceLoader(Class<S> serviceContract) {
+			this.delegates = new ArrayList<>();
+			// Always try the aggregated class loader first
+			this.delegates.add( ServiceLoader.load( serviceContract, AggregatedClassLoader.this ) );
+
+			// Then also try the individual class loaders,
+			// because only them can instantiate services provided by jars in the module path
+			final Iterator<ClassLoader> clIterator = newClassLoaderIterator();
+			while ( clIterator.hasNext() ) {
+				this.delegates.add(
+						ServiceLoader.load( serviceContract, clIterator.next() )
+				);
+			}
+		}
+
+		public Collection<S> getAll() {
+			final Set<String> loadedTypes = new LinkedHashSet<>();
+			final Set<S> services = new LinkedHashSet<>();
+			delegates.stream()
+					// Each loader's stream method returns a stream of service providers: flatten that into a single stream
+					.flatMap( ServiceLoader::stream )
+					.forEach( provider -> {
+						String typeName = provider.type().getName();
+						// Only instantiate the first encountered instance of each type
+						if ( loadedTypes.add( typeName ) ) {
+							services.add( provider.get() );
+						}
+					} );
+			return services;
+		}
+
+		public void reload() {
+			for ( ServiceLoader<S> delegate : delegates ) {
+				delegate.reload();
+			}
+		}
+	}
+
 
 }
