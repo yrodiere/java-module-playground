@@ -216,7 +216,8 @@ public class AggregatedClassLoader extends ClassLoader {
 	}
 
 	public <S> AggregatedServiceLoader<S> createAggregatedServiceLoader(Class<S> serviceContract) {
-		return new AggregatedServiceLoaderImpl<>( serviceContract );
+		// TODO pick the right implementation based on JDK version
+		return new ClassPathAndModulePathAggregatedServiceLoader<>( serviceContract );
 	}
 
 	private static ClassLoader locateSystemClassLoader() {
@@ -237,10 +238,32 @@ public class AggregatedClassLoader extends ClassLoader {
 		}
 	}
 
-	public class AggregatedServiceLoaderImpl<S> implements AggregatedServiceLoader<S> {
+	public class ClassPathOnlyAggregatedServiceLoader<S> implements AggregatedServiceLoader<S> {
+		private final ServiceLoader<S> delegate;
+
+		private ClassPathOnlyAggregatedServiceLoader(Class<S> serviceContract) {
+			this.delegate = ServiceLoader.load( serviceContract, AggregatedClassLoader.this );
+		}
+
+		@Override
+		public Collection<S> getAll() {
+			final Set<S> services = new LinkedHashSet<>();
+			for ( S service : delegate ) {
+				services.add( service );
+			}
+			return services;
+		}
+
+		@Override
+		public void reload() {
+			delegate.reload();
+		}
+	}
+
+	public class ClassPathAndModulePathAggregatedServiceLoader<S> implements AggregatedServiceLoader<S> {
 		private final List<ServiceLoader<S>> delegates;
 
-		private AggregatedServiceLoaderImpl(Class<S> serviceContract) {
+		private ClassPathAndModulePathAggregatedServiceLoader(Class<S> serviceContract) {
 			this.delegates = new ArrayList<>();
 			// Always try the aggregated class loader first
 			this.delegates.add( ServiceLoader.load( serviceContract, AggregatedClassLoader.this ) );
