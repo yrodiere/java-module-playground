@@ -14,6 +14,7 @@
 
         <version.org.hibernate>5.4.2.Final</version.org.hibernate>
         <version.org.hibernate.search>6.0.0.Alpha5</version.org.hibernate.search>
+        <version.com.h2database>1.4.178</version.com.h2database>
     </properties>
 
     <modules>
@@ -44,6 +45,11 @@
                 <groupId>org.hibernate.search</groupId>
                 <artifactId>hibernate-search-mapper-orm</artifactId>
                 <version>${version.org.hibernate.search}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>${version.com.h2database}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
