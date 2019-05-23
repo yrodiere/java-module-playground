@@ -7,6 +7,8 @@
 package org.hibernate.sandbox.java.service.consumer.impl;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,8 +18,34 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import org.hibernate.AssertionFailure;
 
 public class AggregatedClassLoader extends ClassLoader {
+
+	private static final Method SERVICE_LOADER_STREAM_METHOD;
+	private static final Method PROVIDER_TYPE_METHOD;
+
+	static {
+		Class<?> serviceLoaderClass = ServiceLoader.class;
+		Method serviceLoaderStreamMethod = null;
+		Method providerTypeMethod = null;
+		try {
+			// JDK 9 introduced the stream() method on ServiceLoader
+			serviceLoaderStreamMethod = serviceLoaderClass.getMethod( "stream" );
+			Class<?> providerClass = Class.forName( serviceLoaderClass.getName() + "$Provider" );
+			providerTypeMethod = providerClass.getMethod( "type" );
+		}
+		catch (NoSuchMethodException | ClassNotFoundException e) {
+			// ignore, we will deal with that later.
+		}
+
+		SERVICE_LOADER_STREAM_METHOD = serviceLoaderStreamMethod;
+		PROVIDER_TYPE_METHOD = providerTypeMethod;
+	}
+
 	private final ClassLoader[] individualClassLoaders;
 	private final TcclLookupPrecedence tcclLookupPrecedence;
 
@@ -216,8 +244,12 @@ public class AggregatedClassLoader extends ClassLoader {
 	}
 
 	public <S> AggregatedServiceLoader<S> createAggregatedServiceLoader(Class<S> serviceContract) {
-		// TODO pick the right implementation based on JDK version
-		return new ClassPathAndModulePathAggregatedServiceLoader<>( serviceContract );
+		if ( SERVICE_LOADER_STREAM_METHOD != null ) {
+			return new ClassPathAndModulePathAggregatedServiceLoader<>( serviceContract );
+		}
+		else {
+			return new ClassPathOnlyAggregatedServiceLoader<>( serviceContract );
+		}
 	}
 
 	private static ClassLoader locateSystemClassLoader() {
@@ -279,14 +311,29 @@ public class AggregatedClassLoader extends ClassLoader {
 		}
 
 		@Override
+		@SuppressWarnings("unchecked")
 		public Collection<S> getAll() {
 			final Set<String> loadedTypes = new LinkedHashSet<>();
 			final Set<S> services = new LinkedHashSet<>();
 			delegates.stream()
-					// Each loader's stream method returns a stream of service providers: flatten that into a single stream
-					.flatMap( ServiceLoader::stream )
+					// Each loader's stream() method returns a stream of service providers: flatten that into a single stream
+					.flatMap( delegate -> {
+						try {
+							return (Stream<? extends Supplier<S>>) SERVICE_LOADER_STREAM_METHOD.invoke( delegate );
+						}
+						catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+							throw new AssertionFailure( "Error calling ServiceLoader.stream()", e );
+						}
+					} )
 					.forEach( provider -> {
-						String typeName = provider.type().getName();
+						Class<?> type;
+						try {
+							type = (Class<?>) PROVIDER_TYPE_METHOD.invoke( provider );
+						}
+						catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+							throw new AssertionFailure( "Error calling ServiceLoader.Provider.type()", e );
+						}
+						String typeName = type.getName();
 						// Only instantiate the first encountered instance of each type
 						if ( loadedTypes.add( typeName ) ) {
 							services.add( provider.get() );
