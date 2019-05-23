@@ -216,7 +216,7 @@ public class AggregatedClassLoader extends ClassLoader {
 	}
 
 	public <S> AggregatedServiceLoader<S> createAggregatedServiceLoader(Class<S> serviceContract) {
-		return new AggregatedServiceLoader<>( serviceContract );
+		return new AggregatedServiceLoaderImpl<>( serviceContract );
 	}
 
 	private static ClassLoader locateSystemClassLoader() {
@@ -237,10 +237,10 @@ public class AggregatedClassLoader extends ClassLoader {
 		}
 	}
 
-	public class AggregatedServiceLoader<S> {
+	public class AggregatedServiceLoaderImpl<S> implements AggregatedServiceLoader<S> {
 		private final List<ServiceLoader<S>> delegates;
 
-		private AggregatedServiceLoader(Class<S> serviceContract) {
+		private AggregatedServiceLoaderImpl(Class<S> serviceContract) {
 			this.delegates = new ArrayList<>();
 			// Always try the aggregated class loader first
 			this.delegates.add( ServiceLoader.load( serviceContract, AggregatedClassLoader.this ) );
@@ -255,6 +255,7 @@ public class AggregatedClassLoader extends ClassLoader {
 			}
 		}
 
+		@Override
 		public Collection<S> getAll() {
 			final Set<String> loadedTypes = new LinkedHashSet<>();
 			final Set<S> services = new LinkedHashSet<>();
@@ -271,6 +272,7 @@ public class AggregatedClassLoader extends ClassLoader {
 			return services;
 		}
 
+		@Override
 		public void reload() {
 			for ( ServiceLoader<S> delegate : delegates ) {
 				delegate.reload();

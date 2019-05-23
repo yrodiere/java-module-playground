@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentMap;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.internal.CoreLogging;
 import org.hibernate.internal.CoreMessageLogger;
-import org.hibernate.sandbox.java.service.consumer.impl.AggregatedClassLoader.AggregatedServiceLoader;
 
 /**
  * Standard implementation of the service for interacting with class loaders
