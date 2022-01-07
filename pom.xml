@@ -14,7 +14,7 @@
 
         <version.org.hibernate>5.4.2.Final</version.org.hibernate>
         <version.org.hibernate.search>6.0.0.Alpha5</version.org.hibernate.search>
-        <version.com.h2database>1.4.178</version.com.h2database>
+        <version.com.h2database>2.0.206</version.com.h2database>
     </properties>
 
     <modules>
